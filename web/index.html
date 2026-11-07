@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="qa-token" content="__QA_TOKEN__">
+  <title>QA Automation</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">QA Automation</div>
+    <nav>
+      <button data-tab="new" class="active">New run</button>
+      <button data-tab="runs">Runs</button>
+      <button data-tab="drafts">Drafts</button>
+      <button data-tab="settings">Settings</button>
+    </nav>
+    <div id="busy" class="pill hidden">Run in progress</div>
+  </header>
+
+  <main>
+    <!-- NEW RUN -->
+    <section id="tab-new" class="tab">
+      <h1>New test run</h1>
+      <p class="muted">Combine any of these scope inputs. The tool finds every test linked to the Jira issues, matching the tags, or chosen by Copilot from your description.</p>
+      <form id="scope-form" class="card grid">
+        <label>Environment <select name="environment" id="env-select"></select></label>
+        <label>Jira issues <input name="jiraKeys" placeholder="APP-123, APP-456"></label>
+        <label class="span2">JQL <input name="jql" placeholder='fixVersion = "2026.11" AND status = "Ready for Test"'></label>
+        <label>Octopus project <input name="octopusProject" placeholder="Customer Portal"></label>
+        <label>Octopus release <span class="row"><input name="octopusRelease" placeholder="1.4.2" list="release-list"><button type="button" id="load-releases" class="ghost">Load</button></span>
+          <datalist id="release-list"></datalist></label>
+        <label class="span2">Tags <input name="tags" placeholder="@invoicing @regression"></label>
+        <label class="span2">Describe what to test (Copilot) <textarea name="freeText" rows="3" placeholder="The invoice export changes and anything else touching invoice totals"></textarea></label>
+        <label class="check"><input type="checkbox" name="includeAlwaysTags" checked> Always include smoke tests</label>
+        <label class="check"><input type="checkbox" name="headed"> Show the browser while testing</label>
+        <div class="span2 actions">
+          <button type="button" id="preview-btn" class="ghost">Preview selection</button>
+          <button type="submit" class="primary">Start run</button>
+        </div>
+      </form>
+      <div id="preview" class="hidden"></div>
+    </section>
+
+    <!-- RUNS -->
+    <section id="tab-runs" class="tab hidden">
+      <div id="runs-list"></div>
+      <div id="run-detail" class="hidden"></div>
+    </section>
+
+    <!-- DRAFTS -->
+    <section id="tab-drafts" class="tab hidden">
+      <h1>AI-drafted tests</h1>
+      <p class="muted">Copilot drafts Playwright tests from a Jira issue's description and acceptance criteria. Drafts are saved to <code>tests/drafts/</code> and never run. Review and fix each draft, then promote it into the regression suite and commit it.</p>
+      <form id="draft-form" class="card grid">
+        <label>Jira issues <input name="keys" placeholder="APP-123, APP-456" required></label>
+        <label class="span2">Notes about the pages involved (optional) <textarea name="pageNotes" rows="2" placeholder="Invoices are at /invoices; the export button is in each row's action menu"></textarea></label>
+        <div class="span2 actions"><button class="primary" type="submit">Draft tests</button></div>
+      </form>
+      <div id="drafts-list"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="tab hidden">
+      <h1>Settings</h1>
+      <p class="muted">Settings are saved in your user profile. Tokens and passwords go to Windows Credential Manager. They are never shown again, never written to files or reports, and never sent to this page.</p>
+      <form id="settings-form">
+        <div class="card">
+          <h2>Environments</h2>
+          <div id="env-rows"></div>
+          <button type="button" class="ghost" id="add-env">Add environment</button>
+          <label>Default environment <input name="defaultEnvironment"></label>
+        </div>
+        <div class="card grid">
+          <h2 class="span2">Test account (Duende IdentityServer)</h2>
+          <label>Username <input name="testUser.username" autocomplete="off"></label>
+          <label>Password <span class="secret" data-secret="testUserPassword"></span></label>
+          <details class="span2"><summary>Custom login page selectors</summary>
+            <div class="grid">
+              <label>Username field <input name="login.usernameSelector" placeholder="#Input_Username"></label>
+              <label>Password field <input name="login.passwordSelector" placeholder="#Input_Password"></label>
+              <label>Submit button <input name="login.submitSelector" placeholder="button[value=login]"></label>
+            </div>
+          </details>
+        </div>
+        <div class="card grid">
+          <h2 class="span2">Jira <button type="button" class="ghost small" data-test="jira">Test connection</button></h2>
+          <label>Base URL <input name="jira.baseUrl" placeholder="https://jira.company.local"></label>
+          <label>Deployment <select name="jira.deployment"><option value="datacenter">Data Center / Server (PAT)</option><option value="cloud">Cloud (email + API token)</option></select></label>
+          <label>Email (Cloud only) <input name="jira.email"></label>
+          <label>API token / PAT <span class="secret" data-secret="jiraToken"></span></label>
+          <label>Project for bugs <input name="jira.projectKey" placeholder="APP"></label>
+          <label>Bug issue type <input name="jira.bugIssueType"></label>
+          <label>Bug labels <input name="jira.bugLabels" data-type="list"></label>
+          <label>Acceptance criteria field <input name="jira.acceptanceCriteriaField" placeholder="customfield_10050"></label>
+          <label class="span2">Component/label → tag map <textarea name="jira.componentTagMap" data-type="map" rows="3" placeholder="Invoicing=@invoicing&#10;Customer Portal=@portal"></textarea></label>
+        </div>
+        <div class="card grid">
+          <h2 class="span2">Octopus Deploy <button type="button" class="ghost small" data-test="octopus">Test connection</button></h2>
+          <label>Server URL <input name="octopus.serverUrl" placeholder="https://octopus.company.local"></label>
+          <label>Space (name or id) <input name="octopus.space"></label>
+          <label>API key <span class="secret" data-secret="octopusApiKey"></span></label>
+          <label>Record results as <select name="octopus.publishMode"><option value="artifact">Artifacts on the deployment</option><option value="releaseNotes">Section in release notes</option><option value="none">Don't record</option></select></label>
+        </div>
+        <div class="card grid">
+          <h2 class="span2">GitHub Copilot <button type="button" class="ghost small" data-test="ai">Test connection</button></h2>
+          <label>GitHub Enterprise URL <input name="github.enterpriseUrl" placeholder="https://github.company.com"></label>
+          <label>Token <span class="secret" data-secret="githubToken"></span></label>
+          <label>AI endpoint <input name="github.aiEndpoint"></label>
+          <label>Model <input name="github.aiModel"></label>
+        </div>
+        <div class="card grid">
+          <h2 class="span2">Run options</h2>
+          <label>Parallel workers <input name="run.workers" type="number" min="1" max="8"></label>
+          <label>Retries on failure <input name="run.retries" type="number" min="0" max="3"></label>
+          <label>Test timeout (ms) <input name="run.timeoutMs" type="number" min="5000" step="1000"></label>
+          <label>Always-included tags <input name="run.alwaysIncludeTags" data-type="list"></label>
+        </div>
+        <div class="actions sticky"><button class="primary" type="submit">Save settings</button></div>
+      </form>
+    </section>
+  </main>
+  <div id="toast" class="toast hidden"></div>
+  <script src="/static/app.js" type="module"></script>
+</body>
+</html>
