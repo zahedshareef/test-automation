@@ -17,8 +17,6 @@ Scope-driven automated testing for the deployed Blazor WebAssembly test site. A 
 
 ## Install on a tester's PC
 
-The repository is private: ask the owner to add you as a collaborator first.
-
 1. Install **Node.js 22.18 or later** (LTS from nodejs.org) and **Git**.
 2. Clone and install:
    ```powershell
